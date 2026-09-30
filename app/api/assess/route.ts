@@ -1,5 +1,4 @@
 import { streamText } from 'ai';
-import { anthropic } from '@ai-sdk/anthropic';
 import { assessmentFormSchema } from '@/lib/schema';
 
 export const maxDuration = 60;
@@ -31,8 +30,9 @@ function textResponse(message: string, status: number) {
 }
 
 export async function POST(req: Request) {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.error('ANTHROPIC_API_KEY is not set. Copy .env.example to .env.local and add your key.');
+  // Locally the gateway authenticates with AI_GATEWAY_API_KEY; on Vercel it uses the OIDC token.
+  if (!process.env.AI_GATEWAY_API_KEY && !process.env.VERCEL_OIDC_TOKEN) {
+    console.error('AI_GATEWAY_API_KEY is not set. Copy .env.example to .env.local and add your key.');
     return textResponse('The assessment service is temporarily unavailable. Please try again later.', 500);
   }
 
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
   const formData = parsed.data;
 
   const result = streamText({
-    model: anthropic('claude-haiku-4-5'),
+    model: 'anthropic/claude-haiku-4.5',
     maxOutputTokens: MAX_OUTPUT_TOKENS,
     onError: ({ error }) => {
       console.error('Assessment stream failed:', error);

@@ -11,7 +11,7 @@ Enterprise teams evaluating Vercel need to know precisely where the boundary sit
 ## How it works
 
 - `app/page.tsx` is a form collecting company, current deployment platform, framework, pain points, and compliance requirements, with results streamed and rendered as formatted markdown.
-- `app/api/assess/route.ts` is a Next.js Route Handler that validates the submitted form with a shared [Zod](lib/schema.ts) schema, applies a simple per-IP rate limit, and streams a completion from Claude (via the [Vercel AI SDK](https://ai-sdk.dev)) using a system prompt that pins the model to a response structure.
+- `app/api/assess/route.ts` is a Next.js Route Handler that validates the submitted form with a shared [Zod](lib/schema.ts) schema, applies a simple per-IP rate limit, and streams a completion from Claude (via the [Vercel AI SDK](https://ai-sdk.dev) and Vercel AI Gateway) using a system prompt that pins the model to a response structure.
 - `components/AssessmentResults.tsx` renders the streamed markdown and is lazy-loaded so the form loads without the markdown libraries.
 - `lib/schema.ts` is the single source of truth for form fields and options, shared by both the client form and the server-side validation.
 
@@ -19,7 +19,7 @@ Enterprise teams evaluating Vercel need to know precisely where the boundary sit
 
 ```bash
 npm install
-cp .env.example .env.local   # then fill in ANTHROPIC_API_KEY
+cp .env.example .env.local   # then fill in AI_GATEWAY_API_KEY
 npm run dev
 ```
 
@@ -29,5 +29,5 @@ Open [http://localhost:3000](http://localhost:3000) and fill out the form to gen
 
 This is a demo/portfolio project, not a production service:
 - Rate limiting is in-memory and per-instance which is fine for a single dev/demo deployment, not for a multi-instance serverless production deployment (that would need a shared store such as Upstash Redis).
-- There's no auth in front of `/api/assess`; anyone with the URL can generate assessments against your API key. Set a monthly spend limit in the Anthropic console before sharing the link. Responses are capped at 12,000 output tokens.
+- There's no auth in front of `/api/assess`; anyone with the URL can generate assessments against your API key. Set a spend budget on the AI Gateway key in the Vercel dashboard before sharing the link. Responses are capped at 12,000 output tokens.
 - The Terraform snippet in the system prompt is a template validated with `terraform validate` against the `vercel/vercel` provider v3. Re-validate it when the provider changes.

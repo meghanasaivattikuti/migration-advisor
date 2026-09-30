@@ -4,7 +4,7 @@ Guidance for coding agents working in this repo. For what the product does and w
 
 ## Stack
 
-Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4, Vercel AI SDK (`ai`, `@ai-sdk/anthropic`), Zod.
+Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4, Vercel AI SDK (`ai`) via Vercel AI Gateway, Zod.
 
 Next.js 16 is newer than most model training data. Before changing routing, metadata, or Route Handlers, check `node_modules/next/dist/docs/` for the current API instead of assuming pre-16 behavior.
 
@@ -12,7 +12,7 @@ Next.js 16 is newer than most model training data. Before changing routing, meta
 
 ```bash
 npm install
-cp .env.example .env.local   # add a real ANTHROPIC_API_KEY
+cp .env.example .env.local   # add a real AI_GATEWAY_API_KEY
 npm run dev
 npm run lint
 npm run build

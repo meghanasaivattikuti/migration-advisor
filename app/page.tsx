@@ -22,6 +22,9 @@ const EXAMPLE_FORM: DraftFormData = {
     'React SPA served from ECS behind an ALB. Node API on Fargate, PostgreSQL on RDS, Kafka for order events, all provisioned with Terraform. Deploys take about 45 minutes and designers cannot preview changes before production. Payments are handled by a third-party gateway.',
 };
 
+const GENERIC_ERROR =
+  'Something went wrong generating your assessment. Please try again in a moment.';
+
 const AssessmentResults = dynamic(() => import('@/components/AssessmentResults'), {
   loading: () => <p className="text-sm text-gray-400">Loading...</p>,
 });
@@ -128,6 +131,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [started, setStarted] = useState(false);
   const [formError, setFormError] = useState('');
+  const [requestError, setRequestError] = useState('');
   const [submittedCompany, setSubmittedCompany] = useState('');
   const resultsRef = useRef<HTMLDivElement>(null);
 
@@ -152,6 +156,7 @@ export default function Home() {
     setLoading(true);
     setStarted(true);
     setAssessment('');
+    setRequestError('');
     // Results render below the button; on phones nothing visible changes without this.
     requestAnimationFrame(() =>
       resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -168,32 +173,31 @@ export default function Home() {
         const errorText = await response.text();
         console.error('Assessment request failed:', response.status, errorText);
         // 4xx messages are written for end users (validation, rate limit); 5xx are generic.
-        setAssessment(
-          response.status < 500 && errorText
-            ? errorText
-            : 'Something went wrong generating your assessment. Please try again in a moment.'
-        );
+        setRequestError(response.status < 500 && errorText ? errorText : GENERIC_ERROR);
         return;
       }
 
       const reader = response.body?.getReader();
       if (!reader) {
-        setAssessment('Something went wrong generating your assessment. Please try again in a moment.');
+        setRequestError(GENERIC_ERROR);
         return;
       }
 
       const decoder = new TextDecoder();
+      let received = '';
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         const chunk = decoder.decode(value, { stream: true });
+        received += chunk;
         setAssessment(prev => prev + chunk);
       }
+      if (!received.trim()) setRequestError(GENERIC_ERROR);
 
     } catch (error) {
       console.error(error);
-      setAssessment('Something went wrong generating your assessment. Please try again in a moment.');
+      setRequestError(GENERIC_ERROR);
     } finally {
       setLoading(false);
     }
@@ -202,6 +206,7 @@ export default function Home() {
   const resetForm = () => {
     setFormData(EMPTY_FORM);
     setAssessment('');
+    setRequestError('');
     setStarted(false);
     setFormError('');
   };
@@ -397,13 +402,19 @@ export default function Home() {
             <div className="mb-6 flex items-center justify-between border-b border-white/10 pb-4">
               <div className="flex items-center gap-2.5">
                 <span
-                  className={`h-2 w-2 rounded-full ${loading ? 'animate-pulse bg-amber-400' : 'bg-emerald-400'}`}
+                  className={`h-2 w-2 rounded-full ${
+                    loading ? 'animate-pulse bg-amber-400' : requestError ? 'bg-red-400' : 'bg-emerald-400'
+                  }`}
                 />
                 <span className="text-sm text-gray-300" role="status">
-                  {loading ? 'Claude is analyzing your architecture...' : 'Assessment complete'}
+                  {loading
+                    ? 'Claude is analyzing your architecture...'
+                    : requestError
+                      ? 'Assessment failed'
+                      : 'Assessment complete'}
                 </span>
               </div>
-              {!loading && assessment && (
+              {!loading && (assessment || requestError) && (
                 <button
                   type="button"
                   onClick={resetForm}
@@ -413,7 +424,19 @@ export default function Home() {
                 </button>
               )}
             </div>
-            {assessment && (
+            {requestError && (
+              <div role="alert" className="rounded-xl border border-red-400/30 bg-red-500/10 p-4">
+                <p className="text-sm text-red-200">{requestError}</p>
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  className="mt-3 min-h-11 rounded-lg border border-white/15 bg-white/10 px-4 text-sm text-white hover:bg-white/15"
+                >
+                  Try again
+                </button>
+              </div>
+            )}
+            {assessment && !requestError && (
               <AssessmentHeader
                 company={submittedCompany}
                 markdown={assessment}
@@ -421,7 +444,7 @@ export default function Home() {
               />
             )}
             <div aria-busy={loading}>
-              {assessment ? (
+              {requestError ? null : assessment ? (
                 <AssessmentResults markdown={assessment} />
               ) : (
                 <p className="text-sm text-gray-400">Waiting for response...</p>
