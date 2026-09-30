@@ -132,6 +132,7 @@ export default function Home() {
   const [started, setStarted] = useState(false);
   const [formError, setFormError] = useState('');
   const [requestError, setRequestError] = useState('');
+  const [runId, setRunId] = useState(0);
   const [submittedCompany, setSubmittedCompany] = useState('');
   const resultsRef = useRef<HTMLDivElement>(null);
 
@@ -157,6 +158,7 @@ export default function Home() {
     setStarted(true);
     setAssessment('');
     setRequestError('');
+    setRunId(id => id + 1);
     // Results render below the button; on phones nothing visible changes without this.
     requestAnimationFrame(() =>
       resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -436,8 +438,9 @@ export default function Home() {
                 </button>
               </div>
             )}
-            {assessment && !requestError && (
+            {(assessment || loading) && !requestError && (
               <AssessmentHeader
+                key={runId}
                 company={submittedCompany}
                 markdown={assessment}
                 loading={loading}
@@ -446,9 +449,7 @@ export default function Home() {
             <div aria-busy={loading}>
               {requestError ? null : assessment ? (
                 <AssessmentResults markdown={assessment} />
-              ) : (
-                <p className="text-sm text-gray-400">Waiting for response...</p>
-              )}
+              ) : null}
               {loading && (
                 <span className="ml-1 inline-block h-4 w-2 animate-pulse bg-white" />
               )}
