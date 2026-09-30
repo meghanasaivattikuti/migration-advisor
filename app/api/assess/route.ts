@@ -30,9 +30,16 @@ function textResponse(message: string, status: number) {
 }
 
 export async function POST(req: Request) {
-  // Locally the gateway authenticates with AI_GATEWAY_API_KEY; on Vercel it uses the OIDC token.
-  if (!process.env.AI_GATEWAY_API_KEY && !process.env.VERCEL_OIDC_TOKEN) {
-    console.error('AI_GATEWAY_API_KEY is not set. Copy .env.example to .env.local and add your key.');
+  // The gateway uses AI_GATEWAY_API_KEY if set, otherwise a Vercel OIDC token. On Vercel the OIDC
+  // token arrives in the x-vercel-oidc-token request header; locally it may be in the env.
+  const hasGatewayAuth =
+    process.env.AI_GATEWAY_API_KEY ||
+    process.env.VERCEL_OIDC_TOKEN ||
+    req.headers.get('x-vercel-oidc-token');
+  if (!hasGatewayAuth) {
+    console.error(
+      'No AI Gateway credentials found. Set AI_GATEWAY_API_KEY (see .env.example) or enable OIDC on the Vercel project.'
+    );
     return textResponse('The assessment service is temporarily unavailable. Please try again later.', 500);
   }
 

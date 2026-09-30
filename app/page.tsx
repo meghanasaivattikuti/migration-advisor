@@ -461,6 +461,7 @@ export default function Home() {
           Assessments are AI-generated guidance, not a contractual commitment. Verify compliance,
           pricing, and plan eligibility with Vercel and your own security team before making decisions.
         </p>
+        <p className="mt-2 text-gray-500">Build {process.env.NEXT_PUBLIC_BUILD_ID}</p>
       </footer>
     </main>
   );
