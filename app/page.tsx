@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, type ComponentProps, type ReactNode } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import dynamic from 'next/dynamic';
+import { useRef, useState, type ReactNode } from 'react';
 import {
   assessmentFormSchema,
   complianceOptions,
@@ -11,60 +10,21 @@ import {
   painPointOptions,
 } from '@/lib/schema';
 
-const markdownComponents: ComponentProps<typeof ReactMarkdown>['components'] = {
-  h1: ({ children }) => (
-    <h1 className="mb-4 mt-6 text-2xl font-bold text-white first:mt-0">{children}</h1>
-  ),
-  h2: ({ children }) => (
-    <h2 className="mb-3 mt-8 border-b border-white/10 pb-2 text-xl font-bold text-white first:mt-0">
-      {children}
-    </h2>
-  ),
-  h3: ({ children }) => (
-    <h3 className="mb-2 mt-6 text-lg font-semibold text-white first:mt-0">{children}</h3>
-  ),
-  p: ({ children }) => <p className="mb-3 leading-relaxed text-gray-300">{children}</p>,
-  strong: ({ children }) => <strong className="font-semibold text-white">{children}</strong>,
-  ul: ({ children }) => <ul className="mb-3 ml-5 list-disc space-y-1 text-gray-300">{children}</ul>,
-  ol: ({ children, start }) => (
-    <ol start={start} className="mb-3 ml-5 list-decimal space-y-1 text-gray-300">
-      {children}
-    </ol>
-  ),
-  li: ({ children }) => <li className="leading-relaxed">{children}</li>,
-  a: ({ children, href }) => (
-    <a href={href} target="_blank" rel="noreferrer" className="text-violet-400 underline hover:text-violet-300">
-      {children}
-    </a>
-  ),
-  code: ({ className, children }) => {
-    const isBlock = className?.includes('language-');
-    if (isBlock) {
-      return <code className={className}>{children}</code>;
-    }
-    return (
-      <code className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-sm text-emerald-300">
-        {children}
-      </code>
-    );
-  },
-  pre: ({ children }) => (
-    <pre className="mb-3 overflow-x-auto rounded-lg border border-white/10 bg-black/60 px-4 py-3 font-mono text-sm text-emerald-400">
-      {children}
-    </pre>
-  ),
-  table: ({ children }) => (
-    <div className="mb-3 overflow-x-auto">
-      <table className="w-full border-collapse text-left text-sm">{children}</table>
-    </div>
-  ),
-  th: ({ children }) => (
-    <th className="border-b border-white/10 px-3 py-2 font-semibold text-white">{children}</th>
-  ),
-  td: ({ children }) => (
-    <td className="border-b border-white/5 px-3 py-2 text-gray-300">{children}</td>
-  ),
+import AssessmentHeader from '@/components/AssessmentHeader';
+
+const EXAMPLE_FORM: DraftFormData = {
+  company: 'Acme Corp',
+  deployment: 'AWS ECS/Fargate',
+  framework: 'React SPA',
+  painPoints: ['Slow deployments', 'No preview environments', 'Poor global performance'],
+  compliance: ['SOC2', 'PCI DSS'],
+  architectureDescription:
+    'React SPA served from ECS behind an ALB. Node API on Fargate, PostgreSQL on RDS, Kafka for order events, all provisioned with Terraform. Deploys take about 45 minutes and designers cannot preview changes before production. Payments are handled by a third-party gateway.',
 };
+
+const AssessmentResults = dynamic(() => import('@/components/AssessmentResults'), {
+  loading: () => <p className="text-sm text-gray-400">Loading...</p>,
+});
 
 interface DraftFormData {
   company: string;
@@ -104,13 +64,21 @@ function ToggleChip({
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      className={`rounded-lg border px-4 py-3 text-left text-sm transition-colors ${
+      className={`flex min-h-12 items-center gap-2.5 rounded-lg border px-3 py-3 text-left text-sm transition-colors sm:px-4 ${
         active
-          ? 'border-violet-400/60 bg-violet-500/10 text-white'
-          : 'border-white/10 bg-black/20 text-gray-400 hover:border-white/20 hover:text-gray-200'
+          ? 'border-violet-400/70 bg-violet-500/15 text-white'
+          : 'border-white/10 bg-black/20 text-gray-300 hover:border-white/25 hover:text-white'
       }`}
     >
-      {label}
+      <span
+        aria-hidden
+        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px] leading-none ${
+          active ? 'border-violet-400 bg-violet-400 text-black' : 'border-white/30'
+        }`}
+      >
+        {active ? '\u2713' : ''}
+      </span>
+      <span className="min-w-0 break-words">{label}</span>
     </button>
   );
 }
@@ -119,17 +87,36 @@ function FormCard({
   title,
   subtitle,
   children,
+  asFieldset = false,
 }: {
   title: string;
   subtitle: string;
   children: ReactNode;
+  asFieldset?: boolean;
 }) {
+  const header = (
+    <>
+      {asFieldset ? (
+        <legend className="text-base font-semibold text-white">{title}</legend>
+      ) : (
+        <h3 className="text-base font-semibold text-white">{title}</h3>
+      )}
+      <p className="mt-1 text-sm text-gray-400">{subtitle}</p>
+    </>
+  );
+  const className =
+    'rounded-2xl border border-white/10 bg-white/[0.02] p-6 sm:p-8 space-y-6 backdrop-blur-sm';
+  if (asFieldset) {
+    return (
+      <fieldset className={className}>
+        <div>{header}</div>
+        {children}
+      </fieldset>
+    );
+  }
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 sm:p-8 space-y-6 backdrop-blur-sm">
-      <div>
-        <h3 className="text-sm font-semibold text-white">{title}</h3>
-        <p className="mt-1 text-xs text-gray-500">{subtitle}</p>
-      </div>
+    <div className={className}>
+      <div>{header}</div>
       {children}
     </div>
   );
@@ -141,6 +128,8 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [started, setStarted] = useState(false);
   const [formError, setFormError] = useState('');
+  const [submittedCompany, setSubmittedCompany] = useState('');
+  const resultsRef = useRef<HTMLDivElement>(null);
 
   const toggleCheckbox = (field: 'painPoints' | 'compliance', value: string) => {
     setFormData(prev => ({
@@ -158,10 +147,15 @@ export default function Home() {
       return;
     }
     setFormError('');
+    setSubmittedCompany(parsed.data.company);
 
     setLoading(true);
     setStarted(true);
     setAssessment('');
+    // Results render below the button; on phones nothing visible changes without this.
+    requestAnimationFrame(() =>
+      resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    );
 
     try {
       const response = await fetch('/api/assess', {
@@ -172,13 +166,19 @@ export default function Home() {
 
       if (!response.ok) {
         const errorText = await response.text();
-        setAssessment('Error: ' + errorText);
+        console.error('Assessment request failed:', response.status, errorText);
+        // 4xx messages are written for end users (validation, rate limit); 5xx are generic.
+        setAssessment(
+          response.status < 500 && errorText
+            ? errorText
+            : 'Something went wrong generating your assessment. Please try again in a moment.'
+        );
         return;
       }
 
       const reader = response.body?.getReader();
       if (!reader) {
-        setAssessment('Error: No response stream');
+        setAssessment('Something went wrong generating your assessment. Please try again in a moment.');
         return;
       }
 
@@ -193,7 +193,7 @@ export default function Home() {
 
     } catch (error) {
       console.error(error);
-      setAssessment('Something went wrong. Check your API key and try again.');
+      setAssessment('Something went wrong generating your assessment. Please try again in a moment.');
     } finally {
       setLoading(false);
     }
@@ -220,7 +220,7 @@ export default function Home() {
             </div>
             <div>
               <h1 className="text-base font-semibold tracking-tight">Migration Readiness Advisor</h1>
-              <p className="text-xs text-gray-500">Enterprise AWS to Vercel assessments</p>
+              <p className="text-xs text-gray-400">Enterprise AWS to Vercel assessments</p>
             </div>
           </div>
           <span className="hidden items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-gray-400 sm:inline-flex">
@@ -244,16 +244,16 @@ export default function Home() {
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-sm text-gray-400 sm:text-base">
             Describe your current AWS setup and get a hybrid migration architecture, IaC guidance,
-            and a phased rollout plan back in seconds.
+            and a phased rollout plan back in about a minute.
           </p>
 
-          <div className="mx-auto mt-8 flex max-w-lg items-center justify-center gap-2 text-xs text-gray-500">
+          <div className="mx-auto mt-8 flex max-w-2xl flex-wrap items-center justify-center gap-x-2 gap-y-2 text-xs text-gray-400">
             {STEPS.map((step, idx) => (
               <div key={step.label} className="flex items-center gap-2">
                 <div className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5">
                   <span className="font-semibold text-gray-300">{idx + 1}.</span>
                   <span className="text-gray-300">{step.label}</span>
-                  <span className="hidden text-gray-600 sm:inline">{step.detail}</span>
+                  <span className="hidden text-gray-500 sm:inline">{step.detail}</span>
                 </div>
                 {idx < STEPS.length - 1 && <span className="text-gray-700">&rarr;</span>}
               </div>
@@ -262,11 +262,26 @@ export default function Home() {
         </div>
       </section>
 
-      <div className="mx-auto max-w-3xl space-y-6 px-6 pb-24">
+      <div className="mx-auto max-w-3xl space-y-6 px-4 pb-16 sm:px-6">
+        <div className="flex flex-col gap-3 rounded-xl border border-violet-400/20 bg-violet-500/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-gray-300">Presenting this? Load a realistic scenario in one click.</p>
+          <button
+            type="button"
+            onClick={() => {
+              setFormData(EXAMPLE_FORM);
+              setFormError('');
+            }}
+            disabled={loading}
+            className="min-h-11 rounded-lg border border-violet-400/40 bg-violet-500/15 px-4 text-sm font-medium text-white transition-colors hover:bg-violet-500/25 disabled:opacity-50"
+          >
+            Try an example
+          </button>
+        </div>
+
         <FormCard title="Your stack" subtitle="The basics of what you are running today.">
           <div className="grid gap-4 sm:grid-cols-3">
             <div>
-              <label htmlFor="company" className="mb-2 block text-sm font-medium text-gray-300">
+              <label htmlFor="company" className="mb-2 block text-sm font-medium text-gray-200">
                 Company Name
               </label>
               <input
@@ -275,19 +290,19 @@ export default function Home() {
                 placeholder="e.g. Acme Corp"
                 value={formData.company}
                 onChange={e => setFormData(prev => ({ ...prev, company: e.target.value }))}
-                className="w-full rounded-lg border border-white/10 bg-black/40 px-4 py-3 text-white placeholder-gray-600 transition-colors focus:border-violet-400/60 focus:outline-none"
+                className="w-full rounded-lg border border-white/10 bg-black/40 px-4 py-3 text-white placeholder-gray-500 transition-colors focus:border-violet-400/70 focus:outline-none focus:ring-2 focus:ring-violet-400/30"
               />
             </div>
 
             <div>
-              <label htmlFor="deployment" className="mb-2 block text-sm font-medium text-gray-300">
+              <label htmlFor="deployment" className="mb-2 block text-sm font-medium text-gray-200">
                 Deployment Platform
               </label>
               <select
                 id="deployment"
                 value={formData.deployment}
                 onChange={e => setFormData(prev => ({ ...prev, deployment: e.target.value }))}
-                className="w-full rounded-lg border border-white/10 bg-black/40 px-4 py-3 text-white transition-colors focus:border-violet-400/60 focus:outline-none"
+                className="w-full rounded-lg border border-white/10 bg-black/40 px-4 py-3 text-white transition-colors focus:border-violet-400/70 focus:outline-none focus:ring-2 focus:ring-violet-400/30"
               >
                 <option value="">Select platform...</option>
                 {deploymentOptions.map(opt => (
@@ -297,14 +312,14 @@ export default function Home() {
             </div>
 
             <div>
-              <label htmlFor="framework" className="mb-2 block text-sm font-medium text-gray-300">
+              <label htmlFor="framework" className="mb-2 block text-sm font-medium text-gray-200">
                 Framework
               </label>
               <select
                 id="framework"
                 value={formData.framework}
                 onChange={e => setFormData(prev => ({ ...prev, framework: e.target.value }))}
-                className="w-full rounded-lg border border-white/10 bg-black/40 px-4 py-3 text-white transition-colors focus:border-violet-400/60 focus:outline-none"
+                className="w-full rounded-lg border border-white/10 bg-black/40 px-4 py-3 text-white transition-colors focus:border-violet-400/70 focus:outline-none focus:ring-2 focus:ring-violet-400/30"
               >
                 <option value="">Select framework...</option>
                 {frameworkOptions.map(opt => (
@@ -315,8 +330,8 @@ export default function Home() {
           </div>
         </FormCard>
 
-        <FormCard title="Pain points" subtitle="Select anything that is currently costing you time or money.">
-          <div className="grid grid-cols-2 gap-2">
+        <FormCard asFieldset title="Pain points" subtitle="Select anything that is currently costing you time or money.">
+          <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
             {painPointOptions.map(opt => (
               <ToggleChip
                 key={opt}
@@ -328,8 +343,8 @@ export default function Home() {
           </div>
         </FormCard>
 
-        <FormCard title="Compliance requirements" subtitle="What your org needs Vercel and AWS to jointly cover.">
-          <div className="grid grid-cols-2 gap-2">
+        <FormCard asFieldset title="Compliance requirements" subtitle="What your org needs Vercel and AWS to jointly cover.">
+          <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
             {complianceOptions.map(opt => (
               <ToggleChip
                 key={opt}
@@ -345,24 +360,24 @@ export default function Home() {
           <textarea
             id="architectureDescription"
             aria-label="Describe your current architecture"
-            rows={5}
+            rows={6}
             placeholder="e.g. We run a React SPA on EC2 behind an ALB, PostgreSQL on RDS, Redis on ElastiCache, all provisioned with Terraform. Our deployment pipeline takes 45 minutes and we have no way for designers to preview changes before production."
             value={formData.architectureDescription}
             onChange={e => setFormData(prev => ({ ...prev, architectureDescription: e.target.value }))}
-            className="w-full resize-none rounded-lg border border-white/10 bg-black/40 px-4 py-3 text-white placeholder-gray-600 transition-colors focus:border-violet-400/60 focus:outline-none"
+            className="w-full resize-none rounded-lg border border-white/10 bg-black/40 px-4 py-3 text-white placeholder-gray-500 transition-colors focus:border-violet-400/70 focus:outline-none focus:ring-2 focus:ring-violet-400/30"
           />
         </FormCard>
 
         {formError && (
-          <p className="text-sm text-red-400">{formError}</p>
+          <p role="alert" className="rounded-lg border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">{formError}</p>
         )}
 
         <button
           onClick={handleSubmit}
           disabled={loading}
-          className="group relative w-full overflow-hidden rounded-xl bg-white py-4 font-semibold text-black transition-all hover:shadow-[0_0_30px_-5px_rgba(255,255,255,0.35)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:shadow-none"
+          className="group relative w-full overflow-hidden rounded-xl bg-white py-4 text-base font-semibold text-black transition-all hover:shadow-[0_0_30px_-5px_rgba(255,255,255,0.35)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:shadow-none"
         >
-          <span className="inline-flex items-center gap-2">
+          <span className="inline-flex items-center justify-center gap-2">
             {loading ? (
               <>
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-black/30 border-t-black" />
@@ -378,13 +393,13 @@ export default function Home() {
         </button>
 
         {started && (
-          <div className="animate-fade-in rounded-2xl border border-white/10 bg-white/[0.02] p-6 backdrop-blur-sm sm:p-8">
+          <div ref={resultsRef} className="animate-fade-in scroll-mt-20 rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-10">
             <div className="mb-6 flex items-center justify-between border-b border-white/10 pb-4">
               <div className="flex items-center gap-2.5">
                 <span
                   className={`h-2 w-2 rounded-full ${loading ? 'animate-pulse bg-amber-400' : 'bg-emerald-400'}`}
                 />
-                <span className="text-sm text-gray-400">
+                <span className="text-sm text-gray-300" role="status">
                   {loading ? 'Claude is analyzing your architecture...' : 'Assessment complete'}
                 </span>
               </div>
@@ -392,19 +407,24 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="text-xs text-gray-500 transition-colors hover:text-white"
+                  className="min-h-11 rounded-lg px-3 text-sm text-gray-300 transition-colors hover:text-white"
                 >
                   New assessment
                 </button>
               )}
             </div>
-            <div>
+            {assessment && (
+              <AssessmentHeader
+                company={submittedCompany}
+                markdown={assessment}
+                loading={loading}
+              />
+            )}
+            <div aria-busy={loading}>
               {assessment ? (
-                <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                  {assessment}
-                </ReactMarkdown>
+                <AssessmentResults markdown={assessment} />
               ) : (
-                <p className="text-sm text-gray-500">Waiting for response...</p>
+                <p className="text-sm text-gray-400">Waiting for response...</p>
               )}
               {loading && (
                 <span className="ml-1 inline-block h-4 w-2 animate-pulse bg-white" />
@@ -413,6 +433,12 @@ export default function Home() {
           </div>
         )}
       </div>
+      <footer className="border-t border-white/10 px-4 py-8 text-center text-xs leading-5 text-gray-400">
+        <p className="mx-auto max-w-2xl">
+          Assessments are AI-generated guidance, not a contractual commitment. Verify compliance,
+          pricing, and plan eligibility with Vercel and your own security team before making decisions.
+        </p>
+      </footer>
     </main>
   );
 }
